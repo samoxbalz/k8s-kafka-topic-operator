@@ -36,6 +36,11 @@ type TopicSpec struct {
 type TopicStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	Partitions        int32             `json:"partitions"`
+	ReplicationFactor int16             `json:"replication-factor"`
+	Config            map[string]string `json:"config,omitempty"`
+	Cluster           string            `json:"cluster"`
+	TerminationPolicy string            `json:"termination-policy,omitempty"`
 }
 
 //+kubebuilder:object:root=true
