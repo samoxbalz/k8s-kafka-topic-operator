@@ -28,19 +28,18 @@ type TopicSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of Topic. Edit topic_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Partitions        int32             `json:"partitions"`
+	ReplicationFactor int16             `json:"replication-factor"`
+	Config            map[string]string `json:"config,omitempty"`
+	Cluster           string            `json:"cluster"`
+	TerminationPolicy string            `json:"termination-policy,omitempty"`
 }
 
 // TopicStatus defines the observed state of Topic
 type TopicStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Partitions        int32             `json:"partitions"`
-	ReplicationFactor int16             `json:"replication-factor"`
-	Config            map[string]string `json:"config,omitempty"`
-	Cluster           string            `json:"cluster"`
-	TerminationPolicy string            `json:"termination-policy,omitempty"`
+	State string `json:"state"`
 }
 
 //+kubebuilder:object:root=true
