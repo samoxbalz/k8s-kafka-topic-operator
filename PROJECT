@@ -1,0 +1,16 @@
+domain: my.domain
+layout:
+- go.kubebuilder.io/v3
+projectName: k8s-kafka-topic-operator
+repo: kafka.samoxbalz.io
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: my.domain
+  group: kafka.samoxbalz.io
+  kind: Topic
+  path: kafka.samoxbalz.io/api/v1
+  version: v1
+version: "3"
