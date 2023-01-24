@@ -18,13 +18,16 @@ package controllers
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"kafka.samoxbalz.io/util"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	kafkasamoxbalziov1 "kafka.samoxbalz.io/api/v1"
+	apiv1 "kafka.samoxbalz.io/api/v1"
 )
 
 // TopicReconciler reconciles a Topic object
@@ -32,6 +35,8 @@ type TopicReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
+
+const topicFinalizer = "kafka.samoxbalz.io/finalizer"
 
 //+kubebuilder:rbac:groups=kafka.samoxbalz.io.my.domain,resources=topics,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=kafka.samoxbalz.io.my.domain,resources=topics/status,verbs=get;update;patch
@@ -47,9 +52,49 @@ type TopicReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.2/pkg/reconcile
 func (r *TopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	logger := log.FromContext(ctx)
+	logger.Info("Start reconciler")
 
-	// TODO(user): your logic here
+	topic := &apiv1.Topic{}
+	err := r.Get(ctx, req.NamespacedName, topic)
+
+	if err != nil {
+		if errors.IsNotFound(err) {
+			logger.Info("Topic resource " + req.Name + " not found or deleted")
+			return ctrl.Result{}, nil
+		}
+		logger.Error(err, "Failed to get Topic resource")
+		return ctrl.Result{}, err
+	}
+
+	kafkaClient, errKafkaConn := util.InitKafkaConnect(&topic.Spec)
+
+	if errKafkaConn != nil {
+		logger.Error(err, "Failed to connect to Kafka")
+		return ctrl.Result{}, errKafkaConn
+	}
+
+	defer func() {
+		err := kafkaClient.Close()
+		if err != nil {
+			logger.Error(err, "Failed to close connection")
+		}
+	}()
+
+	if controllerutil.ContainsFinalizer(topic, topicFinalizer) {
+		if !topic.GetDeletionTimestamp().IsZero() {
+			logger.Info("Topic resource " + topic.Name + " to be deleted")
+			controllerutil.RemoveFinalizer(topic, topicFinalizer)
+			if errDeletionTopic := kafkaClient.DeleteTopic(topic.Spec.Name); errDeletionTopic != nil {
+				return ctrl.Result{}, errDeletionTopic
+			}
+			err := r.Update(ctx, topic)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{}, nil
+		}
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -57,6 +102,6 @@ func (r *TopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 // SetupWithManager sets up the controller with the Manager.
 func (r *TopicReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&kafkasamoxbalziov1.Topic{}).
+		For(&apiv1.Topic{}).
 		Complete(r)
 }

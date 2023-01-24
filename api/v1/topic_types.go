@@ -27,7 +27,8 @@ import (
 type TopicSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-
+	Name              string            `json:"name,required"`
+	Brokers           []string          `json:"brokers,required"`
 	Partitions        int32             `json:"partitions"`
 	ReplicationFactor int16             `json:"replication-factor"`
 	Config            map[string]string `json:"config,omitempty"`

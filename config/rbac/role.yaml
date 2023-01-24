@@ -1,0 +1,33 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - kafka.samoxbalz.io.my.domain
+  resources:
+  - topics
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kafka.samoxbalz.io.my.domain
+  resources:
+  - topics/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - kafka.samoxbalz.io.my.domain
+  resources:
+  - topics/status
+  verbs:
+  - get
+  - patch
+  - update
