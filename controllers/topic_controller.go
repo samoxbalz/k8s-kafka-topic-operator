@@ -81,6 +81,15 @@ func (r *TopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		}
 	}()
 
+	// Add finalizer
+	if !controllerutil.ContainsFinalizer(topic, topicFinalizer) {
+		controllerutil.AddFinalizer(topic, topicFinalizer)
+		err := r.Update(ctx, topic)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	if controllerutil.ContainsFinalizer(topic, topicFinalizer) {
 		if !topic.GetDeletionTimestamp().IsZero() {
 			logger.Info("Topic resource " + topic.Name + " to be deleted")
@@ -96,6 +105,27 @@ func (r *TopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		}
 	}
 
+	// Hash for idempotency
+	actualHash := util.GetHashFromLabels(topic.Labels)
+	expectedHash := util.GenerateHashFromSpec(topic.Spec)
+
+	if actualHash == "" {
+		logger.Info("Topic resource " + topic.Name + " created")
+		_, err = r.updateLabels(ctx, topic, expectedHash)
+	} else if actualHash != expectedHash {
+		logger.Info("Topic resource " + topic.Name + " changed")
+		_, err = r.updateLabels(ctx, topic, expectedHash)
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func (r *TopicReconciler) updateLabels(ctx context.Context, topic *apiv1.Topic, hash string) (ctrl.Result, error) {
+	topic.Labels = util.SetHashToLabel(topic.Labels, hash)
+	err := r.Update(ctx, topic)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 	return ctrl.Result{}, nil
 }
 
