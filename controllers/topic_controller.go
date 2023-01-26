@@ -111,9 +111,15 @@ func (r *TopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	if actualHash == "" {
 		logger.Info("Topic resource " + topic.Name + " created")
+		if errCreationTopic := util.CreateTopic(&kafkaClient, &topic.Spec); errCreationTopic != nil {
+			return ctrl.Result{}, errCreationTopic
+		}
 		_, err = r.updateLabels(ctx, topic, expectedHash)
 	} else if actualHash != expectedHash {
 		logger.Info("Topic resource " + topic.Name + " changed")
+		if errUpdateTopic := util.UpdateTopic(&kafkaClient, &topic.Spec); errUpdateTopic != nil {
+			return ctrl.Result{}, errUpdateTopic
+		}
 		_, err = r.updateLabels(ctx, topic, expectedHash)
 	}
 
