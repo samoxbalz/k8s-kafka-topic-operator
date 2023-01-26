@@ -90,6 +90,7 @@ func (r *TopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		}
 	}
 
+	// Handle deletion
 	if controllerutil.ContainsFinalizer(topic, topicFinalizer) {
 		if !topic.GetDeletionTimestamp().IsZero() {
 			logger.Info("Topic resource " + topic.Name + " to be deleted")
